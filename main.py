@@ -3,7 +3,9 @@ from game import Game
 
 pygame.init()
 p = pygame
-pygame.display.set_caption("Light")
+pygame.display.set_caption("Light-Exe-version")
+icone = p.transform.scale(p.image.load("assets/Green_on.png"), (32, 32))
+pygame.display.set_icon(icone)
 screen = pygame.display.set_mode((200, 200))
 clock = pygame.time.Clock()
 FPS = 60
