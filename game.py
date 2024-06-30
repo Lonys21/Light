@@ -6,15 +6,26 @@ p = pygame
 class Game:
     def __init__(self, screen, FPS):
         # screen
+        # self.INFOS_SIZE = 100
         self.screen = screen
         self.FPS = FPS
-        self.background_color = "black"
-        self.actual_screen = "game"
+        self.background_color_demonstration = (5, 5, 5)
+        self.background_color_player = "Black"
+        self.background_color = self.background_color_demonstration
+
+        # menu
+        self.actual_screen = "welcome_screen"
+        self.welcome_screen = p.image.load("assets/Welcome_screen.png")
+
+        # buttons
+        self.BUTTON_WIDTH = 100
+        self.BUTTON_HEIGHT = 60
+        self.play_button = Button("Play", self.screen.get_width()/2 - self.BUTTON_WIDTH/2, self.screen.get_height()*13/20 , self)
+        self.replay_button = Button("Replay", self.screen.get_width()/2 - self.BUTTON_WIDTH/2, self.screen.get_height()/2 - self.BUTTON_HEIGHT/2, self)
 
 
         # game_state
-        self.game_state = "demonstrate_off"  # demonstrate/ player
-        self.round = 1
+        self.game_state = "demonstrate_off"  # demonstrate_off/ demonstrate_on / player
         self.TIMER_BETWEEN_STATES = self.FPS*0.5
         self.timer_states = self.TIMER_BETWEEN_STATES
 
@@ -35,33 +46,71 @@ class Game:
         self.num_light_clicked = 0
         self.answer = True
 
+        # round
+        self.round = 1
+        self.font_round = p.font.SysFont("Arial", 30)
+        self.font_color = "white"
+        self.font_score = p.font.SysFont("Arial", 18)
+
+
+
+
+    def replay(self):
+        # game_state
+        self.game_state = 'demonstrate_off'
+        # color
+        self.lights_demonstrated = []
+        self.light_on = False
+        self.num_light_clicked = 0
+        self.answer = True
+
+        # round
+        self.round = 1
 
     def update(self):
         a = 0
         self.screen.fill(self.background_color)
-        for light in self.lights:
-            if light.update():
-                a = 1
-            self.screen.blit(light.image, (light.rect.x, light.rect.y))
-        if a == 0:
-            self.light_on = False
-        else:
-            self.light_on = True
-        if self.game_state == 'demonstrate_off':
-            self.add_light()
-        elif self.game_state == 'demonstrate_on':
-            self.demonstrate()
-        elif self.game_state == 'player':
-            if not self.answer and self.num_light_clicked != 0:
-                print("loose")
-            elif self.num_light_clicked == len(self.lights_demonstrated) and not self.light_on:
+        if self.actual_screen == 'welcome_screen':
+            self.screen.blit(self.welcome_screen, (0, 0))
+            self.screen.blit(self.play_button.image, (self.play_button.rect.x, self.play_button.rect.y))
+        elif self.actual_screen == 'game':
+            if not self.game_state == 'display_round':
+                for light in self.lights:
+                    if light.update():
+                        a = 1
+                    self.screen.blit(light.image, (light.rect.x, light.rect.y))
+                text = str(self.round)
+                self.screen.blit(self.font_round.render(text, True, self.font_color),  # display the round
+                                 (self.screen.get_width() / 2 - self.font_round.size(text)[0] / 2,
+                                  self.screen.get_height() / 2 - self.font_round.size(text)[1] / 2))  # Center the text
+            if a == 0:
+                self.light_on = False
+            else:
+                self.light_on = True
+            if self.game_state == 'demonstrate_off':
                 if self.timer_between_states():
-                    self.game_state = 'demonstrate_off'
+                    self.add_light()
+            elif self.game_state == 'demonstrate_on':
+                self.demonstrate()
+            elif self.game_state == 'player':
+                if not self.answer and self.num_light_clicked != 0:
+                    self.actual_screen = 'loose_screen'
+                elif self.num_light_clicked == len(self.lights_demonstrated) and not self.light_on:
+                    if self.timer_between_states():
+                        self.round += 1
+                        self.game_state = 'demonstrate_off'
+        elif self.actual_screen == 'loose_screen':
+            text = "You passed " + str(self.round) + " rounds"
+            self.screen.blit(self.font_score.render(text, True, self.font_color),  # display the text
+                             (self.screen.get_width() / 2 - self.font_score.size(text)[0] / 2, # Center the text horizontally
+                              self.screen.get_height()* 1/4 - self.font_score.size(text)[1] / 2))
+            self.screen.blit(self.replay_button.image, (self.replay_button.rect.x, self.replay_button.rect.y)) # displat the replay button
 
 
 
 
     def add_light(self):
+        self.background_color = self.background_color_demonstration # change the background color --> turn to the demonstration, don't click
         self.num_light_clicked = 0
         color = random.choice(self.colors)
         color_dictionnary = {"color": color[0], "Done": False}
@@ -97,6 +146,7 @@ class Game:
                             return
             previous_color = color['color']
         if self.timer_between_states():
+            self.background_color = self.background_color_player # change the color of the background --> turn of the player
             self.game_state = 'player'
 
     def verify(self, color):
@@ -143,3 +193,14 @@ class Light(p.sprite.Sprite):
         self.activated = True
         self.image = self.image_on
         self.on_timer = self.g.FPS*self.g.LIGHT_TIME_ON
+
+
+class Button(pygame.sprite.Sprite):
+    def __init__(self, file, x, y, game):
+        super().__init__()
+        self.image_idle = p.transform.scale(pygame.image.load("assets/" + file + "_button_idle.png"), (game.BUTTON_WIDTH, game.BUTTON_HEIGHT))
+        self.image_mouse_on = p.transform.scale(pygame.image.load("assets/" + file + "_button_mouse_on.png"), (game.BUTTON_WIDTH, game.BUTTON_HEIGHT))
+        self.image = self.image_idle
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
